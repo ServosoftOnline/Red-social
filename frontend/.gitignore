@@ -12,9 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Archivo de variables de entorno
-.env
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -25,6 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# Configuración
-proceso.txt
