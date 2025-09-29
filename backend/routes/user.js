@@ -3,7 +3,7 @@ import express from "express";
 const userRoutes = express.Router();
 
 // Importo los métodos del controlador
-import {testUser, register, login, profile, list, update, upload, avatar} from "./../controllers/user.js";
+import {testUser, register, login, profile, list, update, upload, avatar, counters} from "./../controllers/user.js";
 
 // Importo el middelware para verificar el token
 import { auth } from "../middleware/auth.js";
@@ -29,9 +29,10 @@ const localStorage = multer.diskStorage({
 // Indico a multer las caracteristicas del almacenamiento
 const localUploads = multer({storage:localStorage});
 
-// Establezco las rutas públicas, las que no precisen de authentificatión seran estas:
+// Establezco las rutas públicas, las que no precisen de authentificatión: Registro, login y obtener avatar
 userRoutes.post('/register', register);
 userRoutes.post('/login', login);
+userRoutes.get('/avatar/:file', avatar);
 
 // Establezco las rutas privadas que requeriran de autentificación mediante el middleware auth
 userRoutes.get('/test-user', auth, testUser);
@@ -47,8 +48,9 @@ userRoutes.put('/update', auth, update);
 // Ruta para subir avatares, añado los middlewares auth y multer indicando que solo subo un archivo
 userRoutes.post('/upload', auth, localUploads.single('file0'), upload);
 
-// Ruta para obtener el avatar
-userRoutes.get('/avatar/:file', auth, avatar);
+// Ruta de contadores
+userRoutes.get('/counters/:id', auth, counters);
+userRoutes.get('/counters', auth, counters);
 
 // Exporto todas las rutas de user
 export default userRoutes;

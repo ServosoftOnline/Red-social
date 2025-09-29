@@ -42,13 +42,14 @@ app.get('/', (req, res) => {
 
 // Importo todas las rutas 
 import userRoutes from './routes/user.js';
-import publicationRoutes from "./routes/publication.js";
 import followRoutes from "./routes/follow.js";
+import publicationRoutes from "./routes/publication.js";
 
 // Añado el prefijo /api/ a las rutas
 app.use("/api/user", userRoutes);
-app.use("/api/publication", publicationRoutes);
 app.use("/api/follow", followRoutes);
+app.use("/api/publication", publicationRoutes);
+
 
 // Poner servidor a escuchar
 app.listen(puerto,() => {

@@ -2,6 +2,8 @@
 
 // Importo el modelo. Ya continene el pluggin de paginacion de mongoose
 import User from "./../models/User.js";
+import Publications from './../models/Publication.js';
+import Follow from './../models/Follow.js';
 
 // Importo bcrypt para encriptar la contraseña
 import bcrypt from 'bcrypt'; 
@@ -14,6 +16,9 @@ import fs from 'fs/promises';
 
 // Importo el modulo nativo path
 import path from 'path';
+
+// Importo el método si estoy siguiendo a un usuario y si este este me sigue
+import {followthisUser, followUserIds} from './../services/followService.js';
 
 
 // METODOS:
@@ -120,7 +125,9 @@ export const login = async(req, res) => {
         if (!passwordMatch) {
             return res.status(401).json({
                 status: 'error',
-                message: 'Password incorrecto.' 
+                message: 'Password incorrecto.',
+                email: params.email,
+                password: params.password
             });
         }
 
@@ -172,13 +179,17 @@ export const profile = async (req,res) => {
                 status: 'error',
                 message: 'El usuario no existe'
             });
-        }        
+        } 
+        
+        // Información de seguimientos
+        const followInfo = await followthisUser(req.user.id, id);
 
         // Devuelvo los datos del usuario excepto el password
         return res.status(200).json({
             status: "success",
             message: "Información del perfil del usuario",
-            user
+            user,
+            followInfo
         });
 
     } catch (error) {
@@ -196,31 +207,38 @@ export const profile = async (req,res) => {
 // Método que devuelve un listado de los usuarios con paginación
 export const list = async (req, res)=> {
 
-    // 1.- Obtener los parámetros de la paginación: La pagina, si no la pasé sera 1 y los elementos que mostraré por pagina
-    const page = req.params.page ? parseInt(req.params.page) : 1;    
-    const itemsPerPage = 5;
+    // 1.- Obtener los parámetros de la paginación: La pagina, si no la pasé sera 1
+    const page = req.params.page ? parseInt(req.params.page) : 1;        
 
-    // 2.- Definir las opciones de paginacion por orden descedente de fecha de creacion
+    // 2.- Opciones de paginacion: limitando el número de paginas, elimino información sensible y ordeno descedente por fecha de creacion
     const options = {
         page: page,
-        limit: itemsPerPage,
+        limit: 5,
+        select: '-email -password -role -__v',
         sort: { created_at: -1 }
     };
 
     // 3.- Ejecutar la consulta con las opciones y el método paginate() y devolver los resultados
     try {
+
+        // Obtengo un array con los seguidores y seguidos del usuario.
+        const { following, followers } = await followUserIds(req.user.id);
         
+        // Realizo la consulta y la paginación al mismo tiempo gracias al pluggin paginate v2
         const result = await User.paginate({}, options); 
         
+        // Devuelvo exito e información
         return res.status(200).json({
             status: 'success',
             message: 'Listado de usuarios',
-            docs: result.docs, // Los documentos de la página actual
-            totalDocs: result.totalDocs, // Total de documentos en la base de datos
-            totalPages: result.totalPages, // Total de páginas
-            page: result.page, // Página actual
-            hasNextPage: result.hasNextPage, // Existe una siguiente página?
-            hasPrevPage: result.hasPrevPage // Existe una pagina anterior
+            docs: result.docs,                  // Los documentos de la página actual
+            totalDocs: result.totalDocs,        // Total de documentos en la base de datos
+            totalPages: result.totalPages,      // Total de páginas
+            page: result.page,                  // Página actual
+            hasNextPage: result.hasNextPage,    // Existe una siguiente página?
+            hasPrevPage: result.hasPrevPage,     // Existe una pagina anterior
+            id_user_following: following,
+            id_user_follow_me: followers
         });
 
     } catch (error) {
@@ -239,7 +257,7 @@ export const update = async (req, res) => {
     try {
 
         // Recojo la info del usuario autenticado que viene del token.
-        const userToUpdateId = req.user.id; 
+        const userIdToUpdate = req.user.id; 
 
         // Recojo la nueva información que viene en el body.
         const infoToUpdate = req.body;
@@ -267,7 +285,7 @@ export const update = async (req, res) => {
 
             // Si existe users y users.length es mayor o igual que uno es que hay una coincidencia.
             // Y si además el usuario encontrado no es el mismo que está intentando actualizar su perfil...
-            const userIsAlreadyTaken = users && users.length >= 1 && users[0]._id.toString() !== userToUpdateId;
+            const userIsAlreadyTaken = users && users.length >= 1 && users[0]._id.toString() !== userIdToUpdate;
             
             if (userIsAlreadyTaken) {
                 return res.status(200).send({
@@ -278,13 +296,13 @@ export const update = async (req, res) => {
         }
         
 
-        // Si me llega la password, la cifro antes de actualizar.
+        // Si me llega la password, la cifro antes de actualizar.        
         if (infoToUpdate.password) {
             infoToUpdate.password = await bcrypt.hash(infoToUpdate.password, 10);
         }
 
         // Buscar y actualizar el usuario con la nueva información.
-        const userUpdated = await User.findByIdAndUpdate(userToUpdateId, infoToUpdate, { new: true });
+        const userUpdated = await User.findByIdAndUpdate(userIdToUpdate, infoToUpdate, { new: true });
         
         // Si no se encuentra el usuario, devolvemos un 404.
         if (!userUpdated) {
@@ -396,71 +414,6 @@ export const upload = async (req, res) => {
 
 }
 
-// Método para subir un avatar - borrar cuando funcione upload
-export const upload2 = async (req, res) => {
-
-    // Obtengo el fichero completo
-    const file = req.file;
-
-    // Compruebo si se subio el archivo
-    if (!file) {
-        return res.status(404).send({
-            status: "error",
-            message: "No se ha proporcionado ningún archivo en la petición."
-        });
-    }
-
-    // Obtener el nombre del archivo subido a partir del fichero completo
-    const image = file.originalname;
-
-    // Sacar la extension del archivo a partir del nombre del archivo
-    const extension = image.split('.').pop();
-
-    // Si la extensión del archivo es incorrecta. Elimino el archivo y devuelve el error
-    const allowedExtensions = ['png', 'jpg', 'jpeg', 'gif'];
-    if (!allowedExtensions.includes(extension)) {
-
-        const filePath = file.path;
-        fs.unlinkSync(filePath);
-
-        return res.status(400).send({
-            status: "error",
-            message: "El archivo adjuntado tiene la extensión: ." + extension + ". Solo se permiten .png, .jpg, .jpeg y .gif"
-        });
-
-    }
-
-    // Guardo el nombre del archivo en la base de datos usando Promesas
-    try {
-
-        // Localizo al usuario por su id y actualizo image con el nombre del archivo
-        const userUpdated = await User.findByIdAndUpdate(
-            req.user.id,
-            { image: file.filename },
-            { new: true }
-        );    
-        
-        // Devuelvo exito
-        return res.status(200).json({
-            status: 'success',
-            message: 'subida correcta',            
-            file: req.file,
-            userUpdated
-        });
-
-    } catch (error) {
-
-        // En caso de error en la ejecución, borramos el archivo y devuelvo el error
-        fs.unlinkSync(file.path);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Error al actualizar la base de datos',
-            error: error.message
-        });
-    }
-
-}
-
 // Metodo que obtiene el avatar guardado en mi carpeta local - FASE DE DESARROLLO
 export const avatar = async (req, res) => { 
 
@@ -502,6 +455,45 @@ export const avatar = async (req, res) => {
             status: 'error',
             message: 'Error en el servidor al verificar el archivo'
         });
+    }
+
+}
+
+// Método que cuenta los usuarios que siguen al usuario logado o al usario pasado como parametro. 
+// Los que sigue y sus publicaciones
+export const counters = async (req, res)=> {
+
+    // Obtengo el id del usuario logado
+    let idUser = req.user.id;
+
+    // Si le pasé un id por parámetro le doy preferencia y machaco el idUser a realizar los contadores
+    if (req.params.id) idUser=req.params.id;
+
+    // Hago los contadores, devuelvo exito e información o error
+    try {
+        
+        const publications = await Publications.countDocuments({'user': idUser});  
+        const following = await Follow.countDocuments({'user': idUser});
+        const followers = await Follow.countDocuments({'followed': idUser});
+
+        // Devuelvo exito
+        return res.status(200).send({
+            status: 'success',
+            message: 'Número de usuario que esta siguiendo, que le están siguiendo y publicaciones de este id de usuario',
+            idUser: idUser,            
+            following: following,
+            followers: followers,
+            publications: publications
+        })
+
+    } catch (error) {
+
+        // Devuelvo error
+        return res.status(500).send({
+            status: 'error',
+            message: 'Error al realizar los contadores de los usuarios que esta siguiendo, sus seguidores y sus publicaciones'
+        });
+
     }
 
 }
