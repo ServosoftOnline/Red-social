@@ -1,163 +1,88 @@
-import React from 'react'
-import avatar from './../../assets/img/user.png';
+/*
+    COMPONENTE QUE MUESTRA TODAS LAS PUBLICACIONES DE LOS USUARIOS QUE SIGUE EL USUARIO LOGADO
+*/
 
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { PublicationsList } from '../user/PublicationsList';
+import { GLOBAL } from '../../helpers/global';
+
+// Componente
 export const Feed = () => {
 
-  return (
-    <>
-        <header className="content__header">
-            <h1 className="content__title">Timeline</h1>
-            <button className="content__button">Mostrar nuevas</button>
-        </header>
+    // Obtengo el id pasado como parámetro
+    const params = useParams();
+    const userId = params.userId;
 
-        <div className="content__posts">
+    // Obtengo el token de localstorage
+    const token = localStorage.getItem('token');    
 
-            <div className="posts__post">
+    // Estado que almacenará las publicaciones del usuario pasado como parámetro
+    const [publications, setPublications] = useState([]);
 
-                <div className="post__container">
+    // Estado para saber si hay más páginas después de la actual
+    const [hasMore, setHasMore] = useState(true);
 
-                    <div className="post__image-user">
-                        <a href="#" className="post__image-link">
-                            <img src={avatar} className="post__user-image" alt="Foto de perfil" />
-                        </a>
-                    </div>
+    // Efecto que obtiene el perfil del usuario cuyo id fue pasado por parámetro, sus contadores y las primeras publicaciones
+    useEffect(() => {        
+        getPublications();
+    }, [userId]);
 
-                    <div className="post__body">
+    // Funcion que obtiene las publicaciones. Desde el backend las tengo limitadas de cinco en cinco
+    // Si llamo a esta función sin pasarle ningún argumento, la variable page valdrá 1 por defecto.
+    const getPublications = async (page = 1) => {        
+        
+        try {
 
-                        <div className="post__user-info">
-                            <a href="#" className="user-info__name">Victor Robles</a>
-                            <span className="user-info__divider"> | </span>
-                            <a href="#" className="user-info__create-date">Hace 1 hora</a>
-                        </div>
+            // Petición para guardar obtener la publicación del usuario
+            const request = await fetch(GLOBAL.url + 'publication/feed/' + page, {
+                method: "GET",        
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": token
+                }
+            });
 
-                        <h4 className="post__content">Hola, buenos dias.</h4>
+            // Obtengo los resultados de la consulta y los hago legibles
+            const data = await request.json();               
 
-                    </div>
+            // Si me devuelve exito la consulta elimino el id pasado como parámetro al array con los id de los following
+            if (data.status == "success" && data.docs) {            
 
-                </div>
+                // Contactena las publicaciones excepto en la primera pagina. La primera pagina la cargaba dos veces
+                // ME TUVO UNA MAÑANA ESTO. EL MODO STRICT LO CARGABA DOS VECES. DEJE EL MODO STRICT ACTIVO Y MODIFIQUE ESTA LÍNEA                
+                setPublications(prev => page === 1 ? data.docs : [...prev, ...data.docs]);
 
+                // Actualizo el estado hasMore con el resultado que me devuelve el pluggin de la paginación
+                setHasMore(data.hasNextPage); 
 
-                <div className="post__buttons">
+            } else {
 
-                    <a href="#" className="post__button">
-                        <i className="fa-solid fa-trash-can"></i>
-                    </a>
+                // Ya no hay más páginas
+                setHasMore(false);
+            }
 
-                </div>
+        } catch (error) {
+            console.error("Error en la petición o red:", error);
+        } 
 
-            </div>
+    }
 
-            <div className="posts__post">
-
-                <div className="post__container">
-
-                    <div className="post__image-user">
-                        <a href="#" className="post__image-link">
-                            <img src={avatar} className="post__user-image" alt="Foto de perfil" />
-                        </a>
-                    </div>
-
-                    <div className="post__body">
-
-                        <div className="post__user-info">
-                            <a href="#" className="user-info__name">Victor Robles</a>
-                            <span className="user-info__divider"> | </span>
-                            <a href="#" className="user-info__create-date">Hace 1 hora</a>
-                        </div>
-
-                        <h4 className="post__content">Hola, buenos dias.</h4>
-
-                    </div>
-                </div>
-
-                <div className="post__buttons">
-
-                    <a href="#" className="post__button">
-                        <i className="fa-solid fa-trash-can"></i>
-                    </a>
-
-                </div>
-
-            </div>
-
+    // Renderizo
+    return (
+        <>
+            <header className="content__header">
+                <h1 className="content__title">Timeline</h1>
+                <button className="content__button">Mostrar nuevas</button>
+            </header>
             
-            <div className="posts__post">
-
-                <div className="post__container">
-
-                    <div className="post__image-user">
-                        <a href="#" className="post__image-link">
-                            <img src={avatar} className="post__user-image" alt="Foto de perfil" />
-                        </a>
-                    </div>
-
-                    <div className="post__body">
-
-                        <div className="post__user-info">
-                            <a href="#" className="user-info__name">Victor Robles</a>
-                            <span className="user-info__divider"> | </span>
-                            <a href="#" className="user-info__create-date">Hace 1 hora</a>
-                        </div>
-
-                        <h4 className="post__content">Hola, buenos dias.</h4>
-
-                    </div>
-                </div>
-
-                <div className="post__buttons">
-
-                    <a href="#" className="post__button">
-                        <i className="fa-solid fa-trash-can"></i>
-                    </a>
-
-                </div>
-
-            </div>
-
-
-
+            {/* Publicaciones. */}
+            <PublicationsList
+                publications = {publications}                
+                getPublications = {getPublications}               
+                hasMore= {hasMore}                              
+            />
             
-            <div className="posts__post">
-
-                <div className="post__container">
-
-                    <div className="post__image-user">
-                        <a href="#" className="post__image-link">
-                            <img src={avatar} className="post__user-image" alt="Foto de perfil" />
-                        </a>
-                    </div>
-
-                    <div className="post__body">
-
-                        <div className="post__user-info">
-                            <a href="#" className="user-info__name">Victor Robles</a>
-                            <span className="user-info__divider"> | </span>
-                            <a href="#" className="user-info__create-date">Hace 1 hora</a>
-                        </div>
-
-                        <h4 className="post__content">Hola, buenos dias.</h4>
-
-                    </div>
-                </div>
-
-                <div className="post__buttons">
-
-                    <a href="#" className="post__button">
-                        <i className="fa-solid fa-trash-can"></i>
-                    </a>
-
-                </div>
-
-            </div>
-
-
-        </div>
-
-        <div className="content__container-btn">
-            <button className="content__btn-more-post">
-                Ver mas publicaciones
-            </button>
-        </div>
-    </>
-  )
+        </>
+    )
 }

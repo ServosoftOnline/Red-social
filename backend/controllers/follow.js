@@ -154,13 +154,12 @@ export const following = async (req, res) => {
     else if (req.query.page) {
         page = parseInt(req.query.page);
     }
-
     
+    // Hago la consulta al backend
     try {
 
         // Obtengo un array con los seguidores y seguidos del usuario.
         const { following, followers } = await followUserIds(userId);
-
         
         // Opciones de paginacion por orden descedente de fecha de creacion. Populando la información del usuario que sigue
         // Filtro información sensible como el password y el rol  y el email      
@@ -230,6 +229,7 @@ export const followers = async (req, res) => {
     }
 
     
+    // Consulto al backend
     try {        
 
         // Obtengo un array con los seguidores y seguidos del usuario.
@@ -241,7 +241,7 @@ export const followers = async (req, res) => {
             page: page,
             limit: 5,
             sort: { created_at: -1 },            
-            populate: { path: 'followed', select: '-password -role -__v -email' }
+            populate: { path: 'user', select: '-password -role -__v -email' }
         };
         
         // Ejecuto la consulta con las opciones, aplico la paginacion y almaceno el resultado
@@ -270,3 +270,4 @@ export const followers = async (req, res) => {
     }
 
 }
+

@@ -104,11 +104,11 @@ export const erase = async (req, res) => {
     try {
 
         // Obtengo el id de la publicación a eliminar pasado como parámetro
-        const publicationId = req.params.id;
+        const publicationId = req.params.id;        
 
-        // Elimino la publicacion a partir del id obtenido
-        const publicationDeleted = await Publication.findOneAndDelete(publicationId);
-
+        // Elimino la publicacion a partir del id obtenido        
+        const publicationDeleted = await Publication.findOneAndDelete({ _id: publicationId });
+        
         // Si no encuentro la publicación lo indico, y si la encontré y la eliminé devuelvo exito
         if(!publicationDeleted) {
 
@@ -139,7 +139,6 @@ export const erase = async (req, res) => {
         });
     }
 
-
 }
 
 // Método para listar todas las publicaciones de un usuario con paginación
@@ -152,7 +151,7 @@ export const publicationOneUser = async (req, res) => {
 
         // Obtengo la página opcional a mostrar. Si no la paso, será 1
         const page = req.params.page ? parseInt(req.params.page) : 1;
-
+       
         // Opciones de la paginación: orden descendente por fecha de creación, elimino __v, populate por usuario e indico lo que deseo mostrar
         const options = {
             page: page,

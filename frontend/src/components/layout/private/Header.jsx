@@ -13,11 +13,6 @@ export const Header = () => {
             {/* Barra de navegación  privada */}
             <Nav/>
 
-            {/* Section privada */}
-            <section className="layout__content">
-
-            </section>
-
         </header>
     </>    
   )

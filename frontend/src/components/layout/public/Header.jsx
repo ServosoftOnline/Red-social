@@ -1,3 +1,4 @@
+// COMPONENTE QUE CONTIENE LA CABECERA PUBLICA QUE A SU VEZ CONTIENE LA BARRA PUBLICA
 import React from 'react'
 import { Nav } from './Nav'
 

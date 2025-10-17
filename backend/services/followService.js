@@ -43,6 +43,9 @@ export const followUserIds = async (identityUserId) => {
 
 // Método si estoy siguiendo a un usuario y si este este me sigue
 export const followthisUser = async (identityUserId, profileUserId) => {
+
+    // console.log(identityUserId);
+    // console.log(profileUserId);
     
     try {
         // Primera consulta para verificar si el usuario sigue al perfil.

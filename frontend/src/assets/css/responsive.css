@@ -1,4 +1,4 @@
-@media (max-width: 1365px) {
+@media (max-width: 1024px) {
     .layout {
         grid-template-areas:
             "nav nav"

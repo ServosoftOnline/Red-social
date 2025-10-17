@@ -58,7 +58,8 @@ export const register = async (req, res) => {
 
         // Si existe users y users.length es mayor o igual que uno es que hay una coincidencia
         if (users && users.length >= 1) {
-            return res.status(200).send ({
+            // return res.status(200).send ({
+            return res.status(409).send ({
                 status: 'success',
                 message: 'El usuario ya existe'
             });
@@ -79,7 +80,10 @@ export const register = async (req, res) => {
         return res.status(200).json({
             status: "success",
             message: "Usuario creado correctamente",
-            user_saved: user_saved
+            name: user_saved.name,
+            surname: user_saved.surname,
+            nick: user_saved.nick,
+            email: user_saved.email
         });
 
     } catch (error) {
@@ -141,12 +145,7 @@ export const login = async(req, res) => {
             user: {
                 id: user._id,
                 name: user.name,
-                surname: user.surname,
-                nick: user.nick,
-                email: user.email,
-                role: user.role,
-                image: user.image,
-                created_at: user.created_at
+                nick: user.nick
             },
             token            
         });
@@ -182,7 +181,7 @@ export const profile = async (req,res) => {
         } 
         
         // Información de seguimientos
-        const followInfo = await followthisUser(req.user.id, id);
+        const followInfo = await followthisUser(req.user.id, id);        
 
         // Devuelvo los datos del usuario excepto el password
         return res.status(200).json({
@@ -287,9 +286,10 @@ export const update = async (req, res) => {
             // Y si además el usuario encontrado no es el mismo que está intentando actualizar su perfil...
             const userIsAlreadyTaken = users && users.length >= 1 && users[0]._id.toString() !== userIdToUpdate;
             
-            if (userIsAlreadyTaken) {
-                return res.status(200).send({
-                    status: 'success',
+             if (userIsAlreadyTaken) {
+                
+                return res.status(409).send({
+                    status: 'error',
                     message: 'El nick o el email ya están en uso por otro usuario.'
                 });
             }
